@@ -104,9 +104,6 @@ def main(args):
         for i in range(args.n_layers):
             Nparams += (args.n_qbts - 1)
 
-    if not os.path.exists(args.output_dir):
-        os.makedirs(os.path.join(args.output_dir,"params_dir"))
-
     # Sets parameter initialization here.
     if args.init_param == "NONE":
         var_params = np.random.uniform(low = -np.pi, high = np.pi, size = Nparams)
