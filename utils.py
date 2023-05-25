@@ -34,7 +34,9 @@ def get_exp_ZZ(z_m, expo):
     return exp_val
 
 def get_num_mt(mt):
-    return list(map(lambda x: 1 if x == '0' else -1, mt))
+    mt_l = list(map(lambda x: 1 if x == '0' else -1, mt))
+    mt_l.reverse()
+    return mt_l
 
 def distanceVecFromSubspace(w, A):
     """
