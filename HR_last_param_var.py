@@ -84,7 +84,7 @@ def get_HR_distance(hyperparam_dict, var_params, backend, ith_HR_dist):
     x_m = get_measurement(n_qbts, var_params, backend, x_l, hyperparam_dict, ith_HR_dist)
     exp_X, exp_ZZ = get_exp_X(x_m, 1),  get_exp_ZZ(z_m, 1)
     cov_mat[0, 0] =  get_exp_X(x_m, 2) - exp_X**2
-    cov_mat[1, 1] = get_exp_X(z_m, 2) - exp_ZZ**2
+    cov_mat[1, 1] = get_exp_ZZ(z_m, 2) - exp_ZZ**2
     cross_val = 0
     z_indices = [[i, i+1] for i in range(n_qbts) if i != (n_qbts-1)]
     for h_idx in range(n_qbts):
