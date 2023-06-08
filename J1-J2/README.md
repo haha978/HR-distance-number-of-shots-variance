@@ -1,6 +1,6 @@
 # HR distance variance measurement for J1-J2 model
 Our goal is to determine the variance of HR distance with respect to number of shots.
-Currently HR_J1_J2_last_param_var.py returns a list of HR distance neasurements.
+Currently `HR_J1_J2_last_param_var.py` returns a list of HR distance neasurements.
 Please edit the codebase appropraitely. 
 
 ## Example command to run VQE 
