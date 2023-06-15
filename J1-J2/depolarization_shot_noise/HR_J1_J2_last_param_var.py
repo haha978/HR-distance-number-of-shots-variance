@@ -1,5 +1,7 @@
 import qiskit
 from qiskit import QuantumCircuit, Aer
+from qiskit_aer.noise import NoiseModel, depolarizing_error
+from qiskit_aer import AerSimulator
 from qiskit.visualization import plot_histogram
 from qiskit.tools.monitor import job_monitor
 from azure.quantum.qiskit import AzureQuantumProvider
@@ -20,21 +22,19 @@ def get_args(parser):
     parser.add_argument('--input_dir', type = str, help = "directory where VQE_hyperparam_dict.npy exists and HR distances and plots will be stored")
     parser.add_argument('--shots', type=int, default=1000, help = "number of shots during HamiltonianReconstuction (default: 1000)")
     parser.add_argument('--num_HR', type = int, help = "number of HR distance measurements to get the variance/mean")
+    parser.add_argument('--p1', type = float, default = 0.0065, help = "one-qubit gate depolarization noise (default: 0.0065)")
+    parser.add_argument('--p2', type = float, default = 0.0398, help = "two-qubit gate depolarization noise (default: 0.0398)")
     args = parser.parse_args()
     return args
 
 def get_measurement(n_qbts, var_params, backend, h_l, hyperparam_dict, param_idx):
     num_shots = hyperparam_dict["shots"]
-    backendnm = hyperparam_dict["backend"]
     measurement_path = os.path.join(args.input_dir, "measurement", f"{param_idx}th_param_{''.join([str(e) for e in h_l])}qbt_h_gate.npy")
     m, n = hyperparam_dict["m"], hyperparam_dict["n"]
     circ = Q_Circuit(m, n, var_params, h_l, hyperparam_dict["n_layers"], hyperparam_dict["ansatz_type"])
     circ.measure(list(range(n_qbts)), list(range(n_qbts)))
     circ = transpile(circ, backend)
     job = backend.run(circ, shots = num_shots)
-    if backendnm != "aer_simulator":
-        job_id = job.id()
-        job_monitor(job)
     result = job.result()
     measurement = dict(result.get_counts())
     np.save(measurement_path, measurement)
@@ -109,8 +109,14 @@ def main(args):
     #LOAD All the hyperparamter data from VQE here
     VQE_hyperparam_dict = np.load(os.path.join(args.input_dir, "VQE_hyperparam_dict.npy"), allow_pickle = True).item()
     params_dir_path = os.path.join(args.input_dir,"params_dir")
-    backend_name = "aer_simulator"
-    backend = Aer.get_backend(backend_name)
+
+    #for now use the simulator, can change the backend to actual hardware or ionq simulator if needed in the future
+    noise_model = NoiseModel()
+    p1_error = depolarizing_error(args.p1, 1)
+    p2_error = depolarizing_error(args.p2, 2)
+    noise_model.add_all_qubit_quantum_error(p1_error, ['h', 'ry'])
+    noise_model.add_all_qubit_quantum_error(p2_error, ['cx'])
+    backend = AerSimulator(noise_model = noise_model)
 
     hyperparam_dict = {}
     hyperparam_dict["gst_E"] = VQE_hyperparam_dict["gst_E"]
@@ -121,7 +127,7 @@ def main(args):
 
     #Need a new number of shots for HR distance --> args.shots set when running the script
     hyperparam_dict["shots"] = args.shots
-    hyperparam_dict["backend"] = backend_name
+    hyperparam_dict["p1"], hyperparam_dict["p2"] = args.p1, args.p2
 
     #save hyperparamter dictionary as "HR_hyperparam_dict.npy"
     print("This is hyperparameter dictionary newly constructed: ", hyperparam_dict)
@@ -143,6 +149,9 @@ def main(args):
         HR_dist = get_HR_distance(hyperparam_dict, last_param_idx, params_dir_path, backend)
         HR_dist_l.append(HR_dist)
     print(HR_dist_l)
+    #list of HR distance measurements
+    HR_dist_l = np.array(HR_dist_l)
+    np.save(os.path.join(args.input_dir, f"p1_{args.p1}_p2_{args.p2}_{args.num_HR}_HR_dists__{args.shots}_shots.npy"), HR_dist_l)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = "VQE for 2-D J1-J2 model")
